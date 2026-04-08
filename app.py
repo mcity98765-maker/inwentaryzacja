@@ -21,7 +21,9 @@ if 'inventory' not in st.session_state:
     st.session_state.inventory = []
 
 # Miejsce na zrobienie zdjęcia
-img_file = st.camera_input("Zrób zdjęcie etykiety")
+# Usuń starą linię z camera_input i wklej to:
+st.info("Jeśli nie widzisz obrazu poniżej, kliknij przycisk odśwież w przeglądarce.")
+img_file = st.camera_input("Zrób zdjęcie", key="camera_final")
 
 if img_file:
     # Przetwarzanie obrazu

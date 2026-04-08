@@ -12,6 +12,7 @@ st.write("Zrób zdjęcie etykiety, a ja spróbuję odczytać tekst.")
 # Inicjalizacja czytnika OCR (wczytuje się raz)
 @st.cache_resource
 def load_reader():
+    # 'pl' dla polskiego, 'en' dla angielskiego
     return easyocr.Reader(['pl', 'en'])
 
 reader = load_reader()
@@ -20,12 +21,8 @@ reader = load_reader()
 if 'inventory' not in st.session_state:
     st.session_state.inventory = []
 
-# Miejsce na zrobienie zdjęcia
+# Miejsce na zrobienie zdjęcia (wersja file_uploader - działa na każdym telefonie)
 img_file = st.file_uploader("Zrób zdjęcie", type=['png', 'jpg', 'jpeg'])
-
-if img_file:
-    # Przetwarzanie obrazu
-
 
 if img_file:
     # Przetwarzanie obrazu

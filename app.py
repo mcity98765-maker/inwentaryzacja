@@ -3,58 +3,57 @@ import numpy as np
 from PIL import Image
 import easyocr
 
-# Konfiguracja - musi być na samym początku
-st.set_page_config(page_title="Inwentaryzacja", layout="centered")
+# Konfiguracja strony
+st.set_page_config(page_title="Inwentaryzator Mebli", page_icon="🗄️")
 
 st.title("📸 Inwentaryzacja Mebli")
+st.write("Zrób zdjęcie etykiety, a ja spróbuję odczytać tekst.")
 
-# Ładowanie modelu OCR
+# Inicjalizacja czytnika OCR (wczytuje się raz)
 @st.cache_resource
-def get_reader():
-    return easyocr.Reader(['pl', 'en'], gpu=False)
+def load_reader():
+    return easyocr.Reader(['pl', 'en'])
 
-try:
-    reader = get_reader()
-except Exception as e:
-    st.error("Błąd ładowania silnika OCR. Sprawdź requirements.txt")
-    st.stop()
+reader = load_reader()
 
-# Baza danych w pamięci
-if 'lista' not in st.session_state:
-    st.session_state.lista = []
+# Inicjalizacja bazy w pamięci sesji
+if 'inventory' not in st.session_state:
+    st.session_state.inventory = []
 
-# APARAT
-foto = st.camera_input("Zrób zdjęcie etykiety")
+# Miejsce na zrobienie zdjęcia
+img_file = st.camera_input("Zrób zdjęcie etykiety")
 
-if foto:
-    img = Image.open(foto)
-    img_array = np.array(img)
+if img_file:
+    # Przetwarzanie obrazu
+    image = Image.open(img_file)
+    img_array = np.array(image)
     
-    with st.spinner('Odczytywanie...'):
-        # Pobieramy tekst
-        wynik = reader.readtext(img_array, detail=0)
-        tekst_ocr = " ".join(wynik)
-    
-    st.success(f"Wykryto: {tekst_ocr}")
+    # Odczyt tekstu
+    with st.spinner('Odczytywanie etykiety...'):
+        results = reader.readtext(img_array, detail=0)
+        detected_text = " ".join(results)
 
-    # Formularz
-    with st.form("dodawanie"):
-        nr_pokoju = st.text_input("Numer pokoju")
-        opis_mebla = st.text_area("Co to jest? (Edytuj jeśli trzeba)", value=tekst_ocr)
-        przycisk = st.form_submit_button("ZAPISZ DO LISTY")
-        
-        if przycisk:
-            st.session_state.lista.append({
-                "Pokój": nr_pokoju,
-                "Opis": opis_mebla
+    st.success(f"Wykryty tekst: {detected_text}")
+
+    # Formularz dodawania danych
+    with st.form("entry_form"):
+        pokoj = st.text_input("Numer pokoju", placeholder="np. 204")
+        opis = st.text_area("Edytuj dane z etykiety", value=detected_text)
+        submit = st.form_submit_button("Dodaj do listy")
+
+        if submit:
+            st.session_state.inventory.append({
+                "Pokój": pokoj,
+                "Dane z etykiety": opis
             })
-            st.toast("Zapisano!")
+            st.toast("Dodano do spisu!")
 
-# Wyświetlanie tabeli
-if st.session_state.lista:
-    st.write("### Twoje zapisane meble:")
-    st.table(st.session_state.lista)
+# Wyświetlanie tabeli z wynikami
+if st.session_state.inventory:
+    st.divider()
+    st.subheader("Twój spis (do skopiowania do Excela)")
+    st.table(st.session_state.inventory)
     
-    if st.button("Wyczyść wszystko"):
-        st.session_state.lista = []
+    if st.button("Wyczyść listę"):
+        st.session_state.inventory = []
         st.rerun()

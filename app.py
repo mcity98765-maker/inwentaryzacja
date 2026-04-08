@@ -3,56 +3,44 @@ import numpy as np
 from PIL import Image
 import easyocr
 
-# Konfiguracja strony
-st.set_page_config(page_title="Inwentaryzacja")
+st.set_page_config(page_title="Inwentaryzacja", layout="centered")
 
-st.title("📸 Inwentaryzacja Mebli")
-
-# Funkcja ładująca model (z zabezpieczeniem)
+# Funkcja OCR
 @st.cache_resource
-def load_model():
+def load_reader():
     return easyocr.Reader(['pl', 'en'], gpu=False)
 
-# Próba załadowania modelu
-try:
-    reader = load_model()
-except Exception as e:
-    st.error(f"Problem z ładowaniem modelu: {e}")
-    st.stop()
+reader = load_reader()
 
-# Baza w pamięci
-if 'lista' not in st.session_state:
-    st.session_state.lista = []
+if 'inventory' not in st.session_state:
+    st.session_state.inventory = []
 
-# APARAT
-st.write("Kliknij poniżej, aby zrobić zdjęcie:")
-foto = st.camera_input("Zrób zdjęcie etykiety")
+st.title("📸 Inwentaryzacja na żywo")
+
+# WYMUSZENIE KAMERY
+# Dodajemy unikalny klucz, aby Streamlit za każdym razem odświeżał moduł
+foto = st.camera_input("Skieruj aparat na etykietę", key="active_camera_v3")
 
 if foto:
     img = Image.open(foto)
     img_array = np.array(img)
     
     with st.spinner('Odczytywanie...'):
-        wynik = reader.readtext(img_array, detail=0)
-        tekst_ocr = " ".join(wynik)
+        results = reader.readtext(img_array, detail=0)
+        tekst = " ".join(results)
     
-    st.success(f"Odczytano: {tekst_ocr}")
+    st.success(f"Wykryto: {tekst}")
 
-    with st.form("formularz"):
+    with st.form("add_form"):
         pokoj = st.text_input("Numer pokoju")
-        opis = st.text_area("Opis (z etykiety)", value=tekst_ocr)
-        zapisz = st.form_submit_button("ZAPISZ DO LISTY")
-        
-        if zapisz:
-            st.session_state.lista.append({"Pokój": pokoj, "Opis": opis})
-            st.toast("Dodano!")
+        opis = st.text_area("Edytuj dane", value=tekst)
+        if st.form_submit_button("ZAPISZ"):
+            st.session_state.inventory.append({"Pokój": pokoj, "Opis": opis})
+            st.rerun()
 
-# Wyświetlanie tabeli
-if st.session_state.lista:
+if st.session_state.inventory:
     st.divider()
-    st.write("### Spis mebli:")
-    st.table(st.session_state.lista)
-    
+    st.table(st.session_state.inventory)
     if st.button("Wyczyść listę"):
-        st.session_state.lista = []
+        st.session_state.inventory = []
         st.rerun()
